@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for Stock Update Lambda functions'
+
+Resources:
+  # S3 Bucket for storing stock data
+  StockBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'stock-data-${Environment}-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+
+  # Lambda execution role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt StockBucket.Arn
+                  - !Sub '${StockBucket.Arn}/*'
+
+  # Buy Stock Lambda Function
+  BuyStockFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'buy-stock-${Environment}'
+      Runtime: nodejs18.x
+      Handler: index.handler
+      Code:
+        S3Bucket: !Ref StockBucket
+        S3Key: functions/buyStock/index.js
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref StockBucket
+          ENVIRONMENT: !Ref Environment
+      Timeout: 30
+      MemorySize: 256
+
+  # Sell Stock Lambda Function
+  SellStockFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'sell-stock-${Environment}'
+      Runtime: nodejs18.x
+      Handler: index.handler
+      Code:
+        S3Bucket: !Ref StockBucket
+        S3Key: functions/sellStock/index.js
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref StockBucket
+          ENVIRONMENT: !Ref Environment
+      Timeout: 30
+      MemorySize: 256
+
+  # CloudWatch Log Groups
+  BuyStockLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${BuyStockFunction}'
+      RetentionInDays: 30
+
+  SellStockLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${SellStockFunction}'
+      RetentionInDays: 30
+
+Outputs:
+  StockBucketName:
+    Description: Name of the S3 bucket storing stock data
+    Value: !Ref StockBucket
+
+  BuyStockFunctionArn:
+    Description: ARN of the Buy Stock Lambda function
+    Value: !GetAtt BuyStockFunction.Arn
+
+  SellStockFunctionArn:
+    Description: ARN of the Sell Stock Lambda function
+    Value: !GetAtt SellStockFunction.Arn
