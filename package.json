@@ -1,0 +1,30 @@
+{
+  "name": "stock-update-ts",
+  "version": "1.0.0",
+  "description": "AWS Lambda functions for stock management",
+  "scripts": {
+    "build": "tsc",
+    "build:buy": "tsc -p src/functions/buy",
+    "build:sell": "tsc -p src/functions/sell",
+    "test": "jest",
+    "lint": "eslint 'src/**/*.ts'",
+    "deploy": "./scripts/deploy.sh",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.821.0",
+    "aws-lambda": "^1.0.7"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.x",
+    "@types/jest": "^29.x",
+    "@types/node": "^18.x",
+    "@typescript-eslint/eslint-plugin": "^5.x",
+    "@typescript-eslint/parser": "^5.x",
+    "esbuild": "^0.19.x",
+    "eslint": "^8.x",
+    "jest": "^29.x",
+    "ts-jest": "^29.x",
+    "typescript": "^4.x"
+  }
+}

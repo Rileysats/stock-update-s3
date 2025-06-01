@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for Stock Update Lambda functions'
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  StockBucketName:
+    Description: "Name of the S3 bucket to store stock data"
+    Type: String
+
+Resources:
+  # S3 Bucket for storing stock data
+  StockBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref StockBucketName
+      VersioningConfiguration:
+        Status: Enabled
+
+  # Lambda execution role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt StockBucket.Arn
+
+  # Buy Stock Lambda Function
+  BuyStockFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: buy-stock
+      Runtime: nodejs22.x
+      Handler: src/functions/buy/index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref StockBucket
+      Timeout: 30
+      MemorySize: 256
+
+  # Sell Stock Lambda Function
+  # SellStockFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     FunctionName: sell-stock
+  #     Runtime: nodejs22.x
+  #     Handler: index.handler
+  #     Code:
+  #       S3Bucket: !Ref StockBucket
+  #       S3Key: functions/sellStock/index.js
+  #     Role: !GetAtt LambdaExecutionRole.Arn
+  #     Environment:
+  #       Variables:
+  #         BUCKET_NAME: !Ref StockBucket
+  #         ENVIRONMENT: !Ref Environment
+  #     Timeout: 30
+  #     MemorySize: 256

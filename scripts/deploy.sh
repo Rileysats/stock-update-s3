@@ -31,6 +31,6 @@ aws cloudformation deploy \
   --stack-name $STACK_NAME \
   --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
   --parameter-overrides \
-    CronSchedule="$CRON_SCHEDULE"
+    StockBucketName="$AWS_DATA_BUCKET"
 
 rm packaged.yaml stock-update.zip
