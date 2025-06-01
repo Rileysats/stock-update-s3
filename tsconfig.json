@@ -1,13 +1,15 @@
 {
   "compilerOptions": {
-    "target": "ES2018",
-    "module": "commonjs",
-    "lib": ["es2018"],
+    "target": "es2022",
+    "noEmit": true,
+    "module": "nodenext",
+    "lib": ["es2024", "ESNext.Array", "ESNext.Collection", "ESNext.Iterator"],
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
-    "esModuleInterport": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
+    "moduleResolution": "node16",
     "baseUrl": "./src",
     "paths": {
       "@shared/*": ["shared/*"]

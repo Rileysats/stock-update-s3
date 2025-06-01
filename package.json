@@ -3,13 +3,9 @@
   "version": "1.0.0",
   "description": "AWS Lambda functions for stock management",
   "scripts": {
-    "build": "tsc",
-    "build:buy": "tsc -p src/functions/buy",
-    "build:sell": "tsc -p src/functions/sell",
-    "test": "jest",
-    "lint": "eslint 'src/**/*.ts'",
-    "deploy": "./scripts/deploy.sh",
-    "clean": "rm -rf dist"
+    "build": "npm run build:buy && npm run build:sell",
+    "build:buy": "esbuild src/functions/buy/index.ts --bundle --platform=node --target=node18 --outdir=dist/buy",
+    "build:sell": "esbuild src/functions/sell/index.ts --bundle --platform=node --target=node18 --outdir=dist/sell"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.821.0",

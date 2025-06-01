@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.."
 
 zip -r stock-update.zip src .env node_modules package.json package-lock.json
+npm run build:buy
 
 # Configuration
 STACK_NAME="stock-update-stack"
@@ -33,4 +34,7 @@ aws cloudformation deploy \
   --parameter-overrides \
     StockBucketName="$AWS_DATA_BUCKET"
 
-rm packaged.yaml stock-update.zip
+# Clean up
+rm packaged.yaml stock-update.zip 
+# rm -r dist
+echo "Deployment complete."

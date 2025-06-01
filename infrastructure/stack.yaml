@@ -41,6 +41,7 @@ Resources:
                   - s3:ListBucket
                 Resource:
                   - !GetAtt StockBucket.Arn
+                  - !Sub '${StockBucket.Arn}/*'
 
   # Buy Stock Lambda Function
   BuyStockFunction:
@@ -48,13 +49,14 @@ Resources:
     Properties:
       FunctionName: buy-stock
       Runtime: nodejs22.x
-      Handler: src/functions/buy/index.handler
+      Handler: index.handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Environment:
         Variables:
           BUCKET_NAME: !Ref StockBucket
-      Timeout: 30
-      MemorySize: 256
+      Timeout: 20
+      CodeUri: ../dist/buy
+      MemorySize: 200
 
   # Sell Stock Lambda Function
   # SellStockFunction:

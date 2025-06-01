@@ -7,7 +7,8 @@ const s3Client = new S3Client({
     region: process.env.AWS_REGION,
 });
 
-async function getStockHolding(symbol: string): Promise<StockHolding | null> {
+// async function getStockHolding(symbol: string): Promise<StockHolding | null> {
+async function getStockHolding(): Promise<StockHolding | null> {
     try {
         const command = new GetObjectCommand({
             Bucket: process.env.BUCKET_NAME,
@@ -23,6 +24,9 @@ async function getStockHolding(symbol: string): Promise<StockHolding | null> {
         }
         
         const data = Buffer.concat(chunks).toString('utf8');
+
+        console.log('Retrieved stock holding data:', data);
+
         return JSON.parse(data);
     } catch (error) {
         if ((error as any).name === 'NoSuchKey') {
@@ -32,27 +36,52 @@ async function getStockHolding(symbol: string): Promise<StockHolding | null> {
     }
 }
 
+async function updateStockHolding(holding: StockHolding): Promise<void> {
+    try {
+        const command = new PutObjectCommand({
+            Bucket: process.env.BUCKET_NAME,
+            Key: `stocks/portfolio.json`,
+            Body: JSON.stringify(holding),
+            ContentType: 'application/json'
+        });     
+
+        await s3Client.send(command);
+    }
+    catch (error) {
+        console.error('Error updating stock holding:', error);
+        throw error;
+    }
+}
+
 export const handler = async (
-    event: APIGatewayProxyEvent,
+    // event: APIGatewayProxyEvent,
+    event: StockTransaction,
     context: Context
 ): Promise<APIGatewayProxyResult> => {
     try {
         // Parse the incoming request body
-        const transaction: StockTransaction = JSON.parse(event.body || '{}');
+
+        // const transaction: StockTransaction = JSON.parse(event);
+        const transaction: StockTransaction = event;
+        console.log('Received transaction:', transaction);
 
         // Validate the input
-        if (!transaction.symbol || !transaction.quantity || !transaction.price) {
-            return {
-                statusCode: 400,
-                body: JSON.stringify({
-                    message: 'Missing required fields: symbol, quantity, or price'
-                })
-            };
+        // if (!transaction.symbol || !transaction.quantity || !transaction.price) {
+        //     return {
+        //         statusCode: 400,
+        //         body: JSON.stringify({
+        //             message: 'Missing required fields: symbol, quantity, or price'
+        //         })
+        //     };
+        // }
+
+        // Access environment variables
+        const bucketName = process.env.BUCKET_NAME;
+        if (!bucketName) {
+            throw new Error('RECEIPT_BUCKET environment variable is not set');
         }
 
-        // Your business logic here
-        // Example: Update stock quantity in S3
-
+        await getStockHolding()
 
         
         return {
