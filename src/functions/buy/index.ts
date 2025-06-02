@@ -7,8 +7,7 @@ const s3Client = new S3Client({
     region: process.env.AWS_REGION,
 });
 
-// async function getStockHolding(symbol: string): Promise<StockHolding | null> {
-async function getStockHolding(): Promise<StockHolding | null> {
+async function getStockHolding(symbol: string): Promise<StockHolding | null> {
     try {
         const command = new GetObjectCommand({
             Bucket: process.env.BUCKET_NAME,
@@ -24,12 +23,18 @@ async function getStockHolding(): Promise<StockHolding | null> {
         }
         
         const data = Buffer.concat(chunks).toString('utf8');
+        const portfolio = JSON.parse(data);
 
-        console.log('Retrieved stock holding data:', data);
+        console.log('Retrieved stock holding data:', portfolio);
 
-        return JSON.parse(data);
+        // Find the specific stock in the portfolio
+        const stockHolding = portfolio.stocks.find(
+            (stock: StockHolding) => stock.symbol === symbol
+        );
+
+        return stockHolding || null;
     } catch (error) {
-        if ((error as any).name === 'NoSuchKey') {
+        if ((error as any).name === 'NoSuchKey') { // TODO: Why this??
             return null;
         }
         throw error;
@@ -53,6 +58,30 @@ async function updateStockHolding(holding: StockHolding): Promise<void> {
     }
 }
 
+async function calculateUpdatedHolding(
+    transaction: StockTransaction,
+    existingHolding: StockHolding | null
+): Promise<StockHolding> {
+    if (!existingHolding) {
+        // If no existing holding, create a new one
+        return {
+            symbol: transaction.symbol,
+            quantity: transaction.quantity,
+            averagePrice: transaction.price
+        };
+    }
+
+    // Update existing holding
+    const totalCost = existingHolding.averagePrice * existingHolding.quantity + transaction.price * transaction.quantity;
+    const totalQuantity = existingHolding.quantity + transaction.quantity;
+
+    return {
+        ...existingHolding,
+        quantity: totalQuantity,
+        averagePrice: totalCost / totalQuantity
+    };
+}
+
 export const handler = async (
     // event: APIGatewayProxyEvent,
     event: StockTransaction,
@@ -66,14 +95,14 @@ export const handler = async (
         console.log('Received transaction:', transaction);
 
         // Validate the input
-        // if (!transaction.symbol || !transaction.quantity || !transaction.price) {
-        //     return {
-        //         statusCode: 400,
-        //         body: JSON.stringify({
-        //             message: 'Missing required fields: symbol, quantity, or price'
-        //         })
-        //     };
-        // }
+        if (!transaction.symbol || !transaction.quantity || !transaction.price) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({
+                    message: 'Missing required fields: symbol, quantity, or price'
+                })
+            };
+        }
 
         // Access environment variables
         const bucketName = process.env.BUCKET_NAME;
@@ -81,9 +110,17 @@ export const handler = async (
             throw new Error('RECEIPT_BUCKET environment variable is not set');
         }
 
-        await getStockHolding()
+        const stockData: StockHolding | null = await getStockHolding(transaction.symbol)
 
+        const updatedStockData: StockHolding = await calculateUpdatedHolding(transaction, stockData)
+
+        console.log('Updated stock holding:', updatedStockData);
+
+        // TODO: need to add updated stock data back into the full portfolio
+        // TODO: partial update??
         
+        // await updateStockHolding(updatedStockData);
+
         return {
             statusCode: 200,
             body: JSON.stringify({

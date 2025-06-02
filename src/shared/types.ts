@@ -8,9 +8,8 @@ export interface StockTransaction {
 
 export interface StockHolding {
     symbol: string;
-    quanitity: number;
+    quantity: number;
     averagePrice: number;
-    lastUpdated: string;
 }
 
 // Example of extending interfaces
