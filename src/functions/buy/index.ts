@@ -1,13 +1,13 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { StockHolding, StockTransaction } from '../../shared/types';
+import { Portfolio, StockHolding, StockTransaction } from '../../shared/types';
 import { Readable } from 'stream';
 
 const s3Client = new S3Client({
     region: process.env.AWS_REGION,
 });
 
-async function getStockHolding(symbol: string): Promise<StockHolding | null> {
+async function getStockPortfolio(): Promise<Portfolio> {
     try {
         const command = new GetObjectCommand({
             Bucket: process.env.BUCKET_NAME,
@@ -23,25 +23,35 @@ async function getStockHolding(symbol: string): Promise<StockHolding | null> {
         }
         
         const data = Buffer.concat(chunks).toString('utf8');
-        const portfolio = JSON.parse(data);
+        const portfolio: Portfolio = JSON.parse(data);
+
+        if (!portfolio.stocks || !Array.isArray(portfolio.stocks)) {
+            console.warn('No stocks array found in portfolio');
+            return { stocks: [], lastUpdated: new Date().toISOString() };
+        }
 
         console.log('Retrieved stock holding data:', portfolio);
 
-        // Find the specific stock in the portfolio
-        const stockHolding = portfolio.stocks.find(
-            (stock: StockHolding) => stock.symbol === symbol
-        );
-
-        return stockHolding || null;
+        return portfolio;
     } catch (error) {
-        if ((error as any).name === 'NoSuchKey') { // TODO: Why this??
-            return null;
-        }
-        throw error;
+    if ((error as any).name === 'NoSuchKey') { // TODO: Why this??
+        console.log('Portfolio file not found, returning empty array');
+        return { stocks: [], lastUpdated: new Date().toISOString() };
+    }
+    throw error;
     }
 }
 
-async function updateStockHolding(holding: StockHolding): Promise<void> {
+async function getStockHolding(symbol: string, portfolio: Portfolio): Promise<StockHolding | null> {
+    // Find the specific stock in the portfolio
+    const stockHolding = portfolio.stocks.find(
+        (stock: StockHolding) => stock.symbol === symbol
+    );
+
+    return stockHolding || null;
+}
+
+async function updateStockHolding(holding: StockHolding[]): Promise<void> {
     try {
         const command = new PutObjectCommand({
             Bucket: process.env.BUCKET_NAME,
@@ -57,6 +67,7 @@ async function updateStockHolding(holding: StockHolding): Promise<void> {
         throw error;
     }
 }
+
 
 async function calculateUpdatedHolding(
     transaction: StockTransaction,
@@ -110,15 +121,15 @@ export const handler = async (
             throw new Error('RECEIPT_BUCKET environment variable is not set');
         }
 
-        const stockData: StockHolding | null = await getStockHolding(transaction.symbol)
-
+        const portfolio: Portfolio = await getStockPortfolio();
+        const stockData: StockHolding | null = await getStockHolding(transaction.symbol, portfolio)
         const updatedStockData: StockHolding = await calculateUpdatedHolding(transaction, stockData)
-
         console.log('Updated stock holding:', updatedStockData);
+
 
         // TODO: need to add updated stock data back into the full portfolio
         // TODO: partial update??
-        
+
         // await updateStockHolding(updatedStockData);
 
         return {
