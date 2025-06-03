@@ -12,6 +12,10 @@ export interface StockHolding {
     averagePrice: number;
 }
 
+export interface Portfolio {
+    stocks: StockHolding[];
+    lastUpdated: string;
+}
 // Example of extending interfaces
 // export interface StockHolding extends Pick<StockTransaction, 'symbol' | 'quantity'> {
 //     averageCost: number;
