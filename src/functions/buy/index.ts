@@ -51,18 +51,31 @@ async function getStockHolding(symbol: string, portfolio: Portfolio): Promise<St
     return stockHolding || null;
 }
 
-async function updateStockHolding(holding: StockHolding[]): Promise<void> {
+async function updateStockHolding(updatedStock: StockHolding, portfolio: Portfolio): Promise<void> {
     try {
+        const stockIndex = portfolio.stocks.findIndex(
+            stock => stock.symbol === updatedStock.symbol
+        );
+
+        if (stockIndex === -1) { // If stock does not exist, add it
+            console.log(`Adding new stock holding for ${updatedStock.symbol}`);
+            portfolio.stocks.push(updatedStock);
+        } else { // If stock exists, update it
+            console.log(`Updating existing stock holding for ${updatedStock.symbol}`);
+            portfolio.stocks[stockIndex] = updatedStock;
+        }
+
+        portfolio.lastUpdated = new Date().toISOString();
+
         const command = new PutObjectCommand({
             Bucket: process.env.BUCKET_NAME,
-            Key: `stocks/portfolio.json`,
-            Body: JSON.stringify(holding),
+            Key: 'stocks/portfolio.json',
+            Body: JSON.stringify(portfolio, null, 2),
             ContentType: 'application/json'
         });     
 
         await s3Client.send(command);
-    }
-    catch (error) {
+    } catch (error) {
         console.error('Error updating stock holding:', error);
         throw error;
     }
@@ -127,10 +140,7 @@ export const handler = async (
         console.log('Updated stock holding:', updatedStockData);
 
 
-        // TODO: need to add updated stock data back into the full portfolio
-        // TODO: partial update??
-
-        // await updateStockHolding(updatedStockData);
+        await updateStockHolding(updatedStockData, portfolio)
 
         return {
             statusCode: 200,
