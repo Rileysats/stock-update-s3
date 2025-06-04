@@ -36,5 +36,5 @@ aws cloudformation deploy \
 
 # Clean up
 rm packaged.yaml stock-update.zip 
-# rm -r dist
+rm -r dist
 echo "Deployment complete."
