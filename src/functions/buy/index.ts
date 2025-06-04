@@ -66,6 +66,7 @@ async function updateStockHolding(updatedStock: StockHolding, portfolio: Portfol
         }
 
         portfolio.lastUpdated = new Date().toISOString();
+        console.log('Updated portfolio:', portfolio);
 
         const command = new PutObjectCommand({
             Bucket: process.env.BUCKET_NAME,
@@ -113,7 +114,6 @@ export const handler = async (
 ): Promise<APIGatewayProxyResult> => {
     try {
         // Parse the incoming request body
-
         // const transaction: StockTransaction = JSON.parse(event);
         const transaction: StockTransaction = event;
         console.log('Received transaction:', transaction);
@@ -135,9 +135,23 @@ export const handler = async (
         }
 
         const portfolio: Portfolio = await getStockPortfolio();
+
         const stockData: StockHolding | null = await getStockHolding(transaction.symbol, portfolio)
-        const updatedStockData: StockHolding = await calculateUpdatedHolding(transaction, stockData)
-        console.log('Updated stock holding:', updatedStockData);
+
+        let updatedStockData: StockHolding ;
+        if (!stockData) {
+            console.log(`No existing stock holding found for ${transaction.symbol}. Creating new holding.`);
+            updatedStockData = {
+                symbol: transaction.symbol,
+                quantity: transaction.quantity,
+                averagePrice: transaction.price
+            };
+        } else {
+            console.log(`Found existing stock holding for ${transaction.symbol}:`, stockData);
+            updatedStockData = await calculateUpdatedHolding(transaction, stockData)
+            console.log('Updated stock holding:', updatedStockData);
+        }
+    
 
 
         await updateStockHolding(updatedStockData, portfolio)
