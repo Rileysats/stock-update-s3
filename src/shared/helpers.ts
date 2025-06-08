@@ -47,4 +47,23 @@ export async function getStockHolding(symbol: string, portfolio: Portfolio): Pro
     return stockHolding || null;
 }
 
+export async function updateStockHolding(portfolio: Portfolio): Promise<void> {
+    try {
+        portfolio.lastUpdated = new Date().toISOString();
+        console.log('Updated portfolio:', portfolio);
+
+        const command = new PutObjectCommand({
+            Bucket: process.env.BUCKET_NAME,
+            Key: 'stocks/portfolio.json',
+            Body: JSON.stringify(portfolio, null, 2),
+            ContentType: 'application/json'
+        });     
+
+        await s3Client.send(command);
+    } catch (error) {
+        console.error('Error updating stock holding:', error);
+        throw error;
+    }
+}
+
 export const s3ClientInstance = s3Client;

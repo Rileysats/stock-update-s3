@@ -1,56 +1,12 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getStockPortfolio, getStockHolding } from '../../shared/helpers';
+import { getStockPortfolio, getStockHolding, updateStockHolding } from '../../shared/helpers';
 import { Portfolio, StockHolding, StockTransaction } from '../../shared/types';
 import { Readable } from 'stream';
 
 const s3Client = new S3Client({
     region: process.env.AWS_REGION,
 });
-
-// async function getStockPortfolio(): Promise<Portfolio> {
-//     try {
-//         const command = new GetObjectCommand({
-//             Bucket: process.env.BUCKET_NAME,
-//             Key: `stocks/portfolio.json`
-//         });
-        
-//         const response = await s3Client.send(command);
-//         const stream = response.Body as Readable;
-//         const chunks: Buffer[] = [];
-        
-//         for await (const chunk of stream) {
-//             chunks.push(Buffer.from(chunk));
-//         }
-        
-//         const data = Buffer.concat(chunks).toString('utf8');
-//         const portfolio: Portfolio = JSON.parse(data);
-
-//         if (!portfolio.stocks || !Array.isArray(portfolio.stocks)) {
-//             console.warn('No stocks array found in portfolio');
-//             return { stocks: [], lastUpdated: new Date().toISOString() };
-//         }
-
-//         console.log('Retrieved stock holding data:', portfolio);
-
-//         return portfolio;
-//     } catch (error) {
-//     if ((error as any).name === 'NoSuchKey') { // TODO: Why this??
-//         console.log('Portfolio file not found, returning empty array');
-//         return { stocks: [], lastUpdated: new Date().toISOString() };
-//     }
-//     throw error;
-//     }
-// }
-
-// async function getStockHolding(symbol: string, portfolio: Portfolio): Promise<StockHolding | null> {
-//     // Find the specific stock in the portfolio
-//     const stockHolding = portfolio.stocks.find(
-//         (stock: StockHolding) => stock.symbol === symbol
-//     );
-
-//     return stockHolding || null;
-// }
 
 export const handler = async (
     // event: APIGatewayProxyEvent,
@@ -71,6 +27,10 @@ export const handler = async (
             };
         }
 
+        // TODO: BELOW NEEDS REFACTORING
+        // Make checks more efficient
+        // More resuable code
+
         // check if stock if not in portfolio, return error
         const portfolio: Portfolio = await getStockPortfolio();
         const stockHolding: StockHolding | null = await getStockHolding(transaction.symbol, portfolio);
@@ -85,7 +45,7 @@ export const handler = async (
         }
 
         // Calculate the updated stock holding  
-        let updatedStockData: StockHolding;
+        let updatedStock: StockHolding;
         if (stockHolding.quantity < transaction.quantity) {
             return {
                 statusCode: 400,
@@ -95,14 +55,32 @@ export const handler = async (
             };
         } else if (stockHolding.quantity === transaction.quantity) {
             console.log(`Removing stock holding for ${transaction.symbol} as quantity is zero after transaction.`);
-            updatedStockData = { ...stockHolding, quantity: 0 };
+            updatedStock = { ...stockHolding, quantity: 0 };
+
+            // Create a new array without the stock to remove
+            const updatedStocks = portfolio.stocks.filter(stock => stock.symbol !== transaction.symbol);
+
+            // Create new portfolio object
+            const updatedPortfolio = {
+                stocks: updatedStocks,
+                lastUpdated: new Date().toISOString()
+            };
+
+            await updateStockHolding(updatedPortfolio);
+
         } else {
             console.log(`Updating stock holding for ${transaction.symbol}.`);
-            updatedStockData = {
+            updatedStock = {
                 ...stockHolding,
                 quantity: stockHolding.quantity - transaction.quantity,
                 averagePrice: ((stockHolding.averagePrice * stockHolding.quantity) - (transaction.price * transaction.quantity)) / (stockHolding.quantity - transaction.quantity)
             };
+            const stockIndex = portfolio.stocks.findIndex(
+                stock => stock.symbol === updatedStock.symbol
+            );
+
+            portfolio.stocks[stockIndex] = updatedStock;
+            await updateStockHolding(portfolio);
         }
 
         return {
