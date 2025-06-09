@@ -8,7 +8,6 @@ Parameters:
     Type: String
 
 Resources:
-  # S3 Bucket for storing stock data
   StockBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -16,7 +15,6 @@ Resources:
       VersioningConfiguration:
         Status: Enabled
 
-  # Lambda execution role
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -43,35 +41,30 @@ Resources:
                   - !GetAtt StockBucket.Arn
                   - !Sub '${StockBucket.Arn}/*'
 
-  # Buy Stock Lambda Function
   BuyStockFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: buy-stock
       Runtime: nodejs22.x
       Handler: index.handler
+      CodeUri: ../dist/buy
       Role: !GetAtt LambdaExecutionRole.Arn
       Environment:
         Variables:
           BUCKET_NAME: !Ref StockBucket
       Timeout: 20
-      CodeUri: ../dist/buy
       MemorySize: 200
 
-  # Sell Stock Lambda Function
-  # SellStockFunction:
-  #   Type: AWS::Lambda::Function
-  #   Properties:
-  #     FunctionName: sell-stock
-  #     Runtime: nodejs22.x
-  #     Handler: index.handler
-  #     Code:
-  #       S3Bucket: !Ref StockBucket
-  #       S3Key: functions/sellStock/index.js
-  #     Role: !GetAtt LambdaExecutionRole.Arn
-  #     Environment:
-  #       Variables:
-  #         BUCKET_NAME: !Ref StockBucket
-  #         ENVIRONMENT: !Ref Environment
-  #     Timeout: 30
-  #     MemorySize: 256
+  SellStockFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: sell-stock
+      Runtime: nodejs22.x
+      Handler: index.handler
+      CodeUri: ../dist/sell
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref StockBucket
+      Timeout: 20
+      MemorySize: 200
