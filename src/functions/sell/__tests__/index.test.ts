@@ -41,7 +41,8 @@ describe('Sell Stock Lambda Function', () => {
         const event = {
             symbol: 'VAS.AX',
             quantity: 5,
-            price: 100.00
+            price: 100.00,
+            type: 'SELL' as const
         };
 
         const context = {} as Context;
@@ -53,6 +54,8 @@ describe('Sell Stock Lambda Function', () => {
         // Verify S3 calls
         const putCall = s3Mock.commandCalls(PutObjectCommand)[0];
         const savedData = JSON.parse(putCall.args[0].input.Body as string);
+
+        console.log('Saved Data:', savedData);
         
         // Verify updated stock data
         expect(savedData.stocks[0]).toEqual({
@@ -66,7 +69,8 @@ describe('Sell Stock Lambda Function', () => {
         const event = {
             symbol: 'NONEXISTENT',
             quantity: 5,
-            price: 100.00
+            price: 100.00,
+            type: 'SELL' as const
         };
 
         const context = {} as Context;
@@ -80,7 +84,8 @@ describe('Sell Stock Lambda Function', () => {
         const event = {
             symbol: 'VAS.AX',
             quantity: 25,  // Try to sell more than the 19 available
-            price: 100.00
+            price: 100.00,
+            type: 'SELL' as const
         };
 
         const context = {} as Context;
@@ -94,7 +99,8 @@ describe('Sell Stock Lambda Function', () => {
         const event = {
             symbol: '',
             quantity: 0,
-            price: 0
+            price: 0,
+            type: 'SELL' as const
         };
 
         const context = {} as Context;
