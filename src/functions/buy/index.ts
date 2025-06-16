@@ -1,43 +1,43 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getStockPortfolio, getStockHolding } from '../../shared/helpers';
+import { getStockPortfolio, getStockHolding, updateStockHolding } from '../../shared/helpers';
 import { Portfolio, StockHolding, StockTransaction } from '../../shared/types';
-import { Readable } from 'stream';
+import { getLocalStockPortfolio, getLocalStockHolding, updateLocalStockHolding } from '../../shared/local-helpers';
 
 const s3Client = new S3Client({
     region: process.env.AWS_REGION,
 });
 
-async function updateStockHolding(updatedStock: StockHolding, portfolio: Portfolio): Promise<void> {
-    try {
-        const stockIndex = portfolio.stocks.findIndex(
-            stock => stock.symbol === updatedStock.symbol
-        );
+// async function updateStockHolding(updatedStock: StockHolding, portfolio: Portfolio): Promise<void> {
+//     try {
+//         const stockIndex = portfolio.stocks.findIndex(
+//             stock => stock.symbol === updatedStock.symbol
+//         );
 
-        if (stockIndex === -1) { // If stock does not exist, add it
-            console.log(`Adding new stock holding for ${updatedStock.symbol}`);
-            portfolio.stocks.push(updatedStock);
-        } else { // If stock exists, update it
-            console.log(`Updating existing stock holding for ${updatedStock.symbol}`);
-            portfolio.stocks[stockIndex] = updatedStock;
-        }
+//         if (stockIndex === -1) { // If stock does not exist, add it
+//             console.log(`Adding new stock holding for ${updatedStock.symbol}`);
+//             portfolio.stocks.push(updatedStock);
+//         } else { // If stock exists, update it
+//             console.log(`Updating existing stock holding for ${updatedStock.symbol}`);
+//             portfolio.stocks[stockIndex] = updatedStock;
+//         }
 
-        portfolio.lastUpdated = new Date().toISOString();
-        console.log('Updated portfolio:', portfolio);
+//         portfolio.lastUpdated = new Date().toISOString();
+//         console.log('Updated portfolio:', portfolio);
 
-        const command = new PutObjectCommand({
-            Bucket: process.env.BUCKET_NAME,
-            Key: 'stocks/portfolio.json',
-            Body: JSON.stringify(portfolio, null, 2),
-            ContentType: 'application/json'
-        });     
+//         const command = new PutObjectCommand({
+//             Bucket: process.env.BUCKET_NAME,
+//             Key: 'stocks/portfolio.json',
+//             Body: JSON.stringify(portfolio, null, 2),
+//             ContentType: 'application/json'
+//         });     
 
-        await s3Client.send(command);
-    } catch (error) {
-        console.error('Error updating stock holding:', error);
-        throw error;
-    }
-}
+//         await s3Client.send(command);
+//     } catch (error) {
+//         console.error('Error updating stock holding:', error);
+//         throw error;
+//     }
+// }
 
 
 async function calculateUpdatedHolding(
@@ -70,8 +70,12 @@ export const handler = async (
     context: Context
 ): Promise<APIGatewayProxyResult> => {
     try {
-        // Parse the incoming request body
-        // const transaction: StockTransaction = JSON.parse(event);
+        const isLocal = process.env.NODE_ENV === 'local';
+        console.log('Environment:', isLocal ? 'Local' : 'Cloud');
+        const getPortfolio = isLocal ? getLocalStockPortfolio : getStockPortfolio;
+        const getHolding = isLocal ? getLocalStockHolding : getStockHolding;
+        const updateHolding = isLocal ? updateLocalStockHolding : updateStockHolding;
+
         const transaction: StockTransaction = event;
         console.log('Received transaction:', transaction);
 
@@ -91,9 +95,9 @@ export const handler = async (
             throw new Error('RECEIPT_BUCKET environment variable is not set');
         }
 
-        const portfolio: Portfolio = await getStockPortfolio();
+        const portfolio: Portfolio = await getPortfolio();
 
-        const stockData: StockHolding | null = await getStockHolding(transaction.symbol, portfolio)
+        const stockData: StockHolding | null = await getHolding(transaction.symbol, portfolio)
 
         let updatedStockData: StockHolding ;
         if (!stockData) {
@@ -109,9 +113,19 @@ export const handler = async (
             console.log('Updated stock holding:', updatedStockData);
         }
     
+        const stockIndex = portfolio.stocks.findIndex(
+            stock => stock.symbol === updatedStockData.symbol
+        );
 
+        if (stockIndex === -1) { // If stock does not exist, add it
+            console.log(`Adding new stock holding for ${updatedStockData.symbol}`);
+            portfolio.stocks.push(updatedStockData);
+        } else { // If stock exists, update it
+            console.log(`Updating existing stock holding for ${updatedStockData.symbol}`);
+            portfolio.stocks[stockIndex] = updatedStockData;
+        }
 
-        await updateStockHolding(updatedStockData, portfolio)
+        await updateHolding(portfolio)
 
         return {
             statusCode: 200,

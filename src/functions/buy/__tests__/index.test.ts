@@ -41,8 +41,7 @@ describe('Buy Stock Lambda Function', () => {
         const event = {
             symbol: 'AAPL',
             quantity: 10,
-            price: 150.00,
-            type: 'BUY' as const
+            price: 150.00
         };
 
         const context = {} as Context;
@@ -71,8 +70,7 @@ describe('Buy Stock Lambda Function', () => {
         const event = {
             symbol: 'VAS.AX',
             quantity: 5,
-            price: 100.00,
-            type: 'BUY' as const
+            price: 100.00
         };
 
         const context = {} as Context;
@@ -86,8 +84,7 @@ describe('Buy Stock Lambda Function', () => {
         const event = {
             symbol: '',
             quantity: 0,
-            price: 0,
-            type: 'BUY' as const
+            price: 0
         };
 
         const context = {} as Context;
@@ -104,8 +101,7 @@ describe('Buy Stock Lambda Function', () => {
         const event = {
             symbol: 'AAPL',
             quantity: 10,
-            price: 150.00,
-            type: 'BUY' as const
+            price: 150.00
         };
 
         const context = {} as Context;

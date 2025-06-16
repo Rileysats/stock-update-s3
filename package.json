@@ -9,7 +9,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "deploy": "sh scripts/deploy.sh"
+    "deploy": "sh scripts/deploy.sh",
+    "local:sell": "ts-node src/local_sell.ts",
+    "local:buy": "ts-node src/local_buy.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.821.0",

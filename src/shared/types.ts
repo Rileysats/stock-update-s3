@@ -3,7 +3,6 @@ export interface StockTransaction {
     quantity: number;           // Number of shares
     price: number;             // Price per share
     timestamp?: Date;          // Optional transaction timestamp
-    type: 'BUY' | 'SELL';     // Transaction type using union type
 }
 
 export interface StockHolding {

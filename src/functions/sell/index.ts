@@ -2,7 +2,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getStockPortfolio, getStockHolding, updateStockHolding } from '../../shared/helpers';
 import { Portfolio, StockHolding, StockTransaction } from '../../shared/types';
-import { Readable } from 'stream';
+import { getLocalStockPortfolio, getLocalStockHolding, updateLocalStockHolding } from '../../shared/local-helpers';
 
 const s3Client = new S3Client({
     region: process.env.AWS_REGION,
@@ -14,6 +14,12 @@ export const handler = async (
     context: Context
 ): Promise<APIGatewayProxyResult> => {
     try {
+        const isLocal = process.env.NODE_ENV === 'local';
+        console.log('Environment:', isLocal ? 'Local' : 'Cloud');
+        const getPortfolio = isLocal ? getLocalStockPortfolio : getStockPortfolio;
+        const getHolding = isLocal ? getLocalStockHolding : getStockHolding;
+        const updateHolding = isLocal ? updateLocalStockHolding : updateStockHolding;
+
         const transaction: StockTransaction = event;
         console.log('Received transaction:', transaction);
 
@@ -32,8 +38,8 @@ export const handler = async (
         // More resuable code
 
         // check if stock if not in portfolio, return error
-        const portfolio: Portfolio = await getStockPortfolio();
-        const stockHolding: StockHolding | null = await getStockHolding(transaction.symbol, portfolio);
+        const portfolio: Portfolio = await getPortfolio();
+        const stockHolding: StockHolding | null = await getHolding(transaction.symbol, portfolio);
 
         if (!stockHolding) {
             return {
@@ -66,7 +72,7 @@ export const handler = async (
                 lastUpdated: new Date().toISOString()
             };
 
-            await updateStockHolding(updatedPortfolio);
+            await updateHolding(updatedPortfolio);
 
         } else {
             console.log(`Updating stock holding for ${transaction.symbol}.`);
@@ -80,7 +86,7 @@ export const handler = async (
             );
 
             portfolio.stocks[stockIndex] = updatedStock;
-            await updateStockHolding(portfolio);
+            await updateHolding(portfolio);
         }
 
         return {
