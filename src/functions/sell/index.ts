@@ -78,8 +78,7 @@ export const handler = async (
             console.log(`Updating stock holding for ${transaction.symbol}.`);
             updatedStock = {
                 ...stockHolding,
-                quantity: stockHolding.quantity - transaction.quantity,
-                averagePrice: ((stockHolding.averagePrice * stockHolding.quantity) - (transaction.price * transaction.quantity)) / (stockHolding.quantity - transaction.quantity)
+                quantity: stockHolding.quantity - transaction.quantity
             };
             const stockIndex = portfolio.stocks.findIndex(
                 stock => stock.symbol === updatedStock.symbol

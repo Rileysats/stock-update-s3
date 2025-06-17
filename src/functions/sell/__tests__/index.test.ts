@@ -60,7 +60,7 @@ describe('Sell Stock Lambda Function', () => {
         expect(savedData.stocks[0]).toEqual({
             symbol: 'VAS.AX',
             quantity: 14,  // Original 19 - 5 sold
-            averagePrice: expect.any(Number)
+            averagePrice: 98.87
         });
     });
 
