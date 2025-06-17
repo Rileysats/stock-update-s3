@@ -3,9 +3,9 @@ import { handler } from './functions/buy/index';
 async function runLocal() {
     // Test transaction
     const event = {
-        symbol: 'VAS.AX',
-        quantity: 1,
-        price: 98.00
+        symbol: 'REXR',
+        quantity: 5,
+        price: 40
     };
 
     // Mock context
@@ -28,6 +28,7 @@ async function runLocal() {
         // Set environment variables
         process.env.AWS_REGION = 'ap-southeast-2';
         process.env.BUCKET_NAME = 'your-bucket-name';
+        process.env.NODE_ENV = 'local';
 
         const result = await handler(event, context);
         console.log('Result:', JSON.stringify(result, null, 2));
