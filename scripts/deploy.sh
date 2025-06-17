@@ -5,7 +5,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.."
 
-# zip -r stock-update.zip src .env node_modules package.json package-lock.json
+echo "Building the project..."
 npm run build
 
 # Configuration

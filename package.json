@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "description": "AWS Lambda functions for stock management",
   "scripts": {
-    "build": "npm run build:buy && npm run build:sell",
+    "build": "npm run build:buy && npm run build:sell && npm run build:parser",
     "build:buy": "esbuild src/functions/buy/index.ts --bundle --platform=node --target=node22 --outdir=dist/buy",
     "build:sell": "esbuild src/functions/sell/index.ts --bundle --platform=node --target=node22 --outdir=dist/sell",
+    "build:parser": "esbuild src/functions/parser/index.ts --bundle --platform=node --target=node22 --outdir=dist/parser",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

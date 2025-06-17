@@ -68,3 +68,56 @@ Resources:
           BUCKET_NAME: !Ref StockBucket
       Timeout: 20
       MemorySize: 200
+  
+  SmsParserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: sms-parser
+      Runtime: nodejs22.x
+      Handler: index.handler
+      CodeUri: ../dist/parser
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 20
+      MemorySize: 200
+
+  # ApiGatewayRestApi:
+  #   Type: AWS::ApiGateway::RestApi
+  #   Properties:
+  #     Name: SmsCommandAPI
+
+  # SmsResource:
+  #   Type: AWS::ApiGateway::Resource
+  #   Properties:
+  #     ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+  #     PathPart: sms
+  #     RestApiId: !Ref ApiGatewayRestApi
+
+  # SmsPostMethod:
+  #   Type: AWS::ApiGateway::Method
+  #   Properties:
+  #     RestApiId: !Ref ApiGatewayRestApi
+  #     ResourceId: !Ref SmsResource
+  #     HttpMethod: POST
+  #     AuthorizationType: NONE
+  #     Integration:
+  #       Type: AWS_PROXY
+  #       IntegrationHttpMethod: POST
+  #       Uri: 
+  #         Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SmsParserLambda.Arn}/invocations
+  #     MethodResponses:
+  #       - StatusCode: 200
+
+  # LambdaInvokePermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     FunctionName: !Ref SmsParserFunction
+  #     Action: lambda:InvokeFunction
+  #     Principal: apigateway.amazonaws.com
+  #     SourceArn:
+  #       Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayRestApi}/*/POST/sms
+
+  # Outputs:
+  # ApiEndpoint:
+  #   Description: "API Gateway endpoint to set as Twilio webhook"
+  #   Value: 
+  #     Fn::Sub: https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/prod/sms
