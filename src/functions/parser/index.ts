@@ -4,9 +4,11 @@ import { Lambda } from 'aws-sdk';
 const lambda = new Lambda();
 
 export const handler = async (event: any) => {
-  const body = new URLSearchParams(event.body);
-  const smsText = body.get('Body')?.trim().toUpperCase() || '';
+  const parsedBody = JSON.parse(event.body);
+  console.log('Parsed body:', parsedBody);
 
+  const smsText = parsedBody.Body?.trim().toUpperCase() || '';
+  console.log('Received SMS:', smsText);
   const match = smsText.match(/(BUY|SELL)\s+([A-Z.]+)\s+(\d+)(?:\s+@(\w+)(?:\s+(\d+(\.\d+)?))?)?/);
 
   if (!match) {
