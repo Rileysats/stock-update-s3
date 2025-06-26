@@ -40,6 +40,16 @@ Resources:
                 Resource:
                   - !GetAtt StockBucket.Arn
                   - !Sub '${StockBucket.Arn}/*'
+        - PolicyName: LambdaInvoke
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:buy-stock
+                  - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:sell-stock
 
   BuyStockFunction:
     Type: AWS::Serverless::Function
@@ -127,66 +137,3 @@ Outputs:
   ApiInvokeURL:
     Description: Invoke URL for your API
     Value: !Sub https://${StockSignalApi}.execute-api.${AWS::Region}.amazonaws.com/prod/trade-signal
-
-  # ParserInvokeFunctionPolicy:
-  #   Type: AWS::IAM::Policy
-  #   Properties:
-  #     PolicyName: ParserInvokeFunctionPolicy
-  #     Roles: 
-  #       - !Ref LambdaExecutionRole
-  #     PolicyDocument:
-  #       Version: '2012-10-17'
-  #       Statement:
-  #         - Effect: Allow
-  #           Action:
-  #             - lambda:InvokeFunction
-  #           Resource:
-  #             - !GetAtt BuyStockFunction.Arn
-  #             - !GetAtt SellStockFunction.Arn
-
-# Outputs:
-#   WhatsAppWebhookUrl:
-#     Description: "Webhook URL for Twilio WhatsApp integration"
-#     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/whatsapp"
-#     Export:
-#       Name: !Sub "${AWS::StackName}-WhatsAppEndpoint"
-  # ApiGatewayRestApi:
-  #   Type: AWS::ApiGateway::RestApi
-  #   Properties:
-  #     Name: SmsCommandAPI
-
-  # SmsResource:
-  #   Type: AWS::ApiGateway::Resource
-  #   Properties:
-  #     ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
-  #     PathPart: sms
-  #     RestApiId: !Ref ApiGatewayRestApi
-
-  # SmsPostMethod:
-  #   Type: AWS::ApiGateway::Method
-  #   Properties:
-  #     RestApiId: !Ref ApiGatewayRestApi
-  #     ResourceId: !Ref SmsResource
-  #     HttpMethod: POST
-  #     AuthorizationType: NONE
-  #     Integration:
-  #       Type: AWS_PROXY
-  #       IntegrationHttpMethod: POST
-  #       Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SmsParserFunction.Arn}/invocations
-  #     MethodResponses:
-  #       - StatusCode: 200
-
-  # LambdaInvokePermission:
-  #   Type: AWS::Lambda::Permission
-  #   Properties:
-  #     FunctionName: !Ref SmsParserFunction
-  #     Action: lambda:InvokeFunction
-  #     Principal: apigateway.amazonaws.com
-  #     SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayRestApi}/*/POST/sms
-
-  # Outputs:
-  #   ApiEndpoint:
-  #     Description: "API Gateway endpoint to set as Twilio webhook"
-  #     Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/prod/sms"
-  #     Export:
-  #       Name: !Sub "${AWS::StackName}-ApiEndpoint"

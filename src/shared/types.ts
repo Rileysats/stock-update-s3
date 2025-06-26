@@ -1,7 +1,7 @@
 export interface StockTransaction {
     symbol: string;             // Stock symbol (e.g., 'AAPL')
     quantity: number;           // Number of shares
-    price: number;             // Price per share
+    price: string;             // Price per share
     timestamp?: Date;          // Optional transaction timestamp
 }
 

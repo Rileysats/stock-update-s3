@@ -15,10 +15,10 @@ export const handler = async (event: any) => {
   const payload: StockTransaction = {
     symbol,
     quantity,
-    price: typeof price === 'number' ? price : 0,
+    price
   };
 
-  const targetFunction = action === 'BUY' ? 'buyStockLambda' : 'sellStockLambda';
+  const targetFunction = action === 'BUY' ? 'buy-stock' : 'sell-stock';
 
   await lambda.invoke({
     FunctionName: targetFunction,
