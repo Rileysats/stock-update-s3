@@ -86,28 +86,70 @@ Resources:
             Path: /whatsapp
             Method: post
 
-  ParserInvokeFunctionPolicy:
-    Type: AWS::IAM::Policy
+  StockSignalApi:
+    Type: AWS::ApiGatewayV2::Api
     Properties:
-      PolicyName: ParserInvokeFunctionPolicy
-      Roles: 
-        - !Ref LambdaExecutionRole
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Action:
-              - lambda:InvokeFunction
-            Resource:
-              - !GetAtt BuyStockFunction.Arn
-              - !GetAtt SellStockFunction.Arn
+      Name: StockSignalAPI
+      ProtocolType: HTTP
+      Target: !GetAtt SmsParserFunction.Arn
+
+  StockSignalApiIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref StockSignalApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SmsParserFunction.Arn}/invocations
+      PayloadFormatVersion: '2.0'
+
+  StockSignalApiRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref StockSignalApi
+      RouteKey: 'POST /trade-signal'
+      Target: !Sub integrations/${StockSignalApiIntegration}
+
+  StockSignalApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref StockSignalApi
+      StageName: prod
+      AutoDeploy: true
+
+  LambdaApiInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SmsParserFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${StockSignalApi}/*/*/trade-signal
 
 Outputs:
-  WhatsAppWebhookUrl:
-    Description: "Webhook URL for Twilio WhatsApp integration"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/whatsapp"
-    Export:
-      Name: !Sub "${AWS::StackName}-WhatsAppEndpoint"
+  ApiInvokeURL:
+    Description: Invoke URL for your API
+    Value: !Sub https://${StockSignalApi}.execute-api.${AWS::Region}.amazonaws.com/prod/trade-signal
+
+  # ParserInvokeFunctionPolicy:
+  #   Type: AWS::IAM::Policy
+  #   Properties:
+  #     PolicyName: ParserInvokeFunctionPolicy
+  #     Roles: 
+  #       - !Ref LambdaExecutionRole
+  #     PolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Effect: Allow
+  #           Action:
+  #             - lambda:InvokeFunction
+  #           Resource:
+  #             - !GetAtt BuyStockFunction.Arn
+  #             - !GetAtt SellStockFunction.Arn
+
+# Outputs:
+#   WhatsAppWebhookUrl:
+#     Description: "Webhook URL for Twilio WhatsApp integration"
+#     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/whatsapp"
+#     Export:
+#       Name: !Sub "${AWS::StackName}-WhatsAppEndpoint"
   # ApiGatewayRestApi:
   #   Type: AWS::ApiGateway::RestApi
   #   Properties:

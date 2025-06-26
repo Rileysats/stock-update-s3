@@ -1,31 +1,21 @@
-// smsParserLambda.ts
 import { Lambda } from 'aws-sdk';
+import { StockTransaction } from '../../shared/types';
 
+const querystring = require('querystring');
 const lambda = new Lambda();
 
 export const handler = async (event: any) => {
-  const parsedBody = JSON.parse(event.body);
-  console.log('Parsed body:', parsedBody);
+  console.log("Received event:", JSON.stringify(event, null, 2));
 
-  const smsText = parsedBody.Body?.trim().toUpperCase() || '';
-  console.log('Received SMS:', smsText);
-  const match = smsText.match(/(BUY|SELL)\s+([A-Z.]+)\s+(\d+)(?:\s+@(\w+)(?:\s+(\d+(\.\d+)?))?)?/);
+  const parsed = JSON.parse(event.body);
+  const { symbol, price, quantity } = parsed as StockTransaction;
+  const action = parsed.action;
+  console.log('Parsed body:', { symbol, price, quantity, action });
 
-  if (!match) {
-    return {
-      statusCode: 400,
-      body: 'Invalid command format',
-    };
-  }
-
-  const [ , action, symbol, quantity, orderType = 'MARKET', price = null ] = match;
-
-  const payload = {
-    action,
+  const payload: StockTransaction = {
     symbol,
-    quantity: parseInt(quantity),
-    orderType,
-    price: price ? parseFloat(price) : undefined,
+    quantity,
+    price: typeof price === 'number' ? price : 0,
   };
 
   const targetFunction = action === 'BUY' ? 'buyStockLambda' : 'sellStockLambda';
