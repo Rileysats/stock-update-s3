@@ -9,7 +9,7 @@ export const handler = async (event: any) => {
 
   const parsed = JSON.parse(event.body);
   const { symbol, price, quantity } = parsed as StockTransaction;
-  const action = parsed.action;
+  const action = parsed.action?.toUpperCase();
   console.log('Parsed body:', { symbol, price, quantity, action });
 
   const payload: StockTransaction = {
