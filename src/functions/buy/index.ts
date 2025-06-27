@@ -1,4 +1,4 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
+import { APIGatewayProxyResult, Context } from 'aws-lambda';
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getStockPortfolio, getStockHolding, updateStockHolding } from '../../shared/helpers';
 import { Portfolio, StockHolding, StockTransaction } from '../../shared/types';
