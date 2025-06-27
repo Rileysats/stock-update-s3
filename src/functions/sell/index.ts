@@ -1,12 +1,7 @@
 import { APIGatewayProxyResult, Context } from 'aws-lambda';
-import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getStockPortfolio, getStockHolding, updateStockHolding } from '../../shared/helpers';
 import { Portfolio, StockHolding, StockTransaction } from '../../shared/types';
 import { getLocalStockPortfolio, getLocalStockHolding, updateLocalStockHolding } from '../../shared/local-helpers';
-
-const s3Client = new S3Client({
-    region: process.env.AWS_REGION,
-});
 
 export const handler = async (
     event: StockTransaction,

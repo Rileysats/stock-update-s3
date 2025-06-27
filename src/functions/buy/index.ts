@@ -1,35 +1,35 @@
 import { APIGatewayProxyResult, Context } from 'aws-lambda';
-import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getStockPortfolio, getStockHolding, updateStockHolding } from '../../shared/helpers';
 import { Portfolio, StockHolding, StockTransaction } from '../../shared/types';
 import { getLocalStockPortfolio, getLocalStockHolding, updateLocalStockHolding } from '../../shared/local-helpers';
 
-const s3Client = new S3Client({
-    region: process.env.AWS_REGION,
-});
-
-async function calculateUpdatedHolding(
+// Calculate the updated stock holding after a buy transaction
+function calculateUpdatedHolding(
     transaction: StockTransaction,
     existingHolding: StockHolding | null
-): Promise<StockHolding> {
+): StockHolding {
     if (!existingHolding) {
-        // If no existing holding, create a new one
         return {
             symbol: transaction.symbol,
             quantity: transaction.quantity,
             averagePrice: transaction.price
         };
     }
-
-    // Update existing holding
     const totalCost = existingHolding.averagePrice * existingHolding.quantity + transaction.price * transaction.quantity;
     const totalQuantity = existingHolding.quantity + transaction.quantity;
-
     return {
         ...existingHolding,
         quantity: totalQuantity,
         averagePrice: totalCost / totalQuantity
     };
+}
+
+// Validate the incoming transaction
+function validateTransaction(transaction: StockTransaction): string | null {
+    if (!transaction.symbol) return 'Missing required field: symbol';
+    if (!transaction.quantity) return 'Missing required field: quantity';
+    if (!transaction.price) return 'Missing required field: price';
+    return null;
 }
 
 export const handler = async (
@@ -38,7 +38,6 @@ export const handler = async (
 ): Promise<APIGatewayProxyResult> => {
     try {
         const isLocal = process.env.NODE_ENV === 'local';
-        console.log('Environment:', isLocal ? 'Local' : 'Cloud');
         const getPortfolio = isLocal ? getLocalStockPortfolio : getStockPortfolio;
         const getHolding = isLocal ? getLocalStockHolding : getStockHolding;
         const updateHolding = isLocal ? updateLocalStockHolding : updateStockHolding;
@@ -46,53 +45,43 @@ export const handler = async (
         const transaction: StockTransaction = event;
         console.log('Received transaction:', transaction);
 
-        // Validate the input
-        if (!transaction.symbol || !transaction.quantity || !transaction.price) {
+        // Validate input
+        const validationError = validateTransaction(transaction);
+        if (validationError) {
             return {
                 statusCode: 400,
-                body: JSON.stringify({
-                    message: 'Missing required fields: symbol, quantity, or price'
-                })
+                body: JSON.stringify({ message: validationError })
             };
         }
 
-        // Access environment variables
+        // Check environment variable
         const bucketName = process.env.BUCKET_NAME;
         if (!bucketName) {
-            throw new Error('RECEIPT_BUCKET environment variable is not set');
-        }
-
-        const portfolio: Portfolio = await getPortfolio();
-
-        const stockData: StockHolding | null = await getHolding(transaction.symbol, portfolio)
-
-        let updatedStockData: StockHolding ;
-        if (!stockData) {
-            console.log(`No existing stock holding found for ${transaction.symbol}. Creating new holding.`);
-            updatedStockData = {
-                symbol: transaction.symbol,
-                quantity: transaction.quantity,
-                averagePrice: transaction.price
+            return {
+                statusCode: 500,
+                body: JSON.stringify({ message: 'BUCKET_NAME environment variable is not set' })
             };
-        } else {
-            console.log(`Found existing stock holding for ${transaction.symbol}:`, stockData);
-            updatedStockData = await calculateUpdatedHolding(transaction, stockData)
-            console.log('Updated stock holding:', updatedStockData);
         }
-    
-        const stockIndex = portfolio.stocks.findIndex(
-            stock => stock.symbol === updatedStockData.symbol
-        );
 
-        if (stockIndex === -1) { // If stock does not exist, add it
-            console.log(`Adding new stock holding for ${updatedStockData.symbol}`);
+        // Get portfolio and holding
+        const portfolio: Portfolio = await getPortfolio();
+        const stockData: StockHolding | null = await getHolding(transaction.symbol, portfolio);
+
+        // Calculate updated holding
+        const updatedStockData: StockHolding = calculateUpdatedHolding(transaction, stockData);
+        console.log('Updated stock holding:', updatedStockData);
+
+        // Update or add the stock in the portfolio
+        const stockIndex = portfolio.stocks.findIndex(stock => stock.symbol === updatedStockData.symbol);
+        if (stockIndex === -1) {
             portfolio.stocks.push(updatedStockData);
-        } else { // If stock exists, update it
-            console.log(`Updating existing stock holding for ${updatedStockData.symbol}`);
+            console.log(`Added new stock holding for ${updatedStockData.symbol}`);
+        } else {
             portfolio.stocks[stockIndex] = updatedStockData;
+            console.log(`Updated existing stock holding for ${updatedStockData.symbol}`);
         }
 
-        await updateHolding(portfolio)
+        await updateHolding(portfolio);
 
         return {
             statusCode: 200,
@@ -101,7 +90,6 @@ export const handler = async (
                 transaction
             })
         };
-
     } catch (error) {
         console.error('Error processing transaction:', error);
         return {
