@@ -8,38 +8,6 @@ const s3Client = new S3Client({
     region: process.env.AWS_REGION,
 });
 
-// async function updateStockHolding(updatedStock: StockHolding, portfolio: Portfolio): Promise<void> {
-//     try {
-//         const stockIndex = portfolio.stocks.findIndex(
-//             stock => stock.symbol === updatedStock.symbol
-//         );
-
-//         if (stockIndex === -1) { // If stock does not exist, add it
-//             console.log(`Adding new stock holding for ${updatedStock.symbol}`);
-//             portfolio.stocks.push(updatedStock);
-//         } else { // If stock exists, update it
-//             console.log(`Updating existing stock holding for ${updatedStock.symbol}`);
-//             portfolio.stocks[stockIndex] = updatedStock;
-//         }
-
-//         portfolio.lastUpdated = new Date().toISOString();
-//         console.log('Updated portfolio:', portfolio);
-
-//         const command = new PutObjectCommand({
-//             Bucket: process.env.BUCKET_NAME,
-//             Key: 'stocks/portfolio.json',
-//             Body: JSON.stringify(portfolio, null, 2),
-//             ContentType: 'application/json'
-//         });     
-
-//         await s3Client.send(command);
-//     } catch (error) {
-//         console.error('Error updating stock holding:', error);
-//         throw error;
-//     }
-// }
-
-
 async function calculateUpdatedHolding(
     transaction: StockTransaction,
     existingHolding: StockHolding | null
@@ -65,7 +33,6 @@ async function calculateUpdatedHolding(
 }
 
 export const handler = async (
-    // event: APIGatewayProxyEvent,
     event: StockTransaction,
     context: Context
 ): Promise<APIGatewayProxyResult> => {

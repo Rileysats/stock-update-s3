@@ -1,22 +1,16 @@
 import { Lambda } from 'aws-sdk';
 import { StockTransaction } from '../../shared/types';
 
-const querystring = require('querystring');
 const lambda = new Lambda();
 
 export const handler = async (event: any) => {
   console.log("Received event:", JSON.stringify(event, null, 2));
 
   const parsed = JSON.parse(event.body);
-  const { symbol, price, quantity } = parsed as StockTransaction;
-  const action = parsed.action?.toUpperCase();
-  console.log('Parsed body:', { symbol, price, quantity, action });
+  const payload: StockTransaction  = parsed;
 
-  const payload: StockTransaction = {
-    symbol,
-    quantity,
-    price
-  };
+  const action = parsed.action?.toUpperCase();
+  console.log('Parsed body:', JSON.stringify(payload, null, 2));
 
   const targetFunction = action === 'BUY' ? 'buy-stock' : 'sell-stock';
 
@@ -27,6 +21,6 @@ export const handler = async (event: any) => {
 
   return {
     statusCode: 200,
-    body: `${action} order for ${symbol} received.`,
+    body: `${action} order for ${payload.symbol} received.`,
   };
 };
